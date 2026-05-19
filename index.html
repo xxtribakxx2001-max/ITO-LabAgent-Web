@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITO LabAgent — AI Automation Agency</title>
+<script type="module" src="https://unpkg.com/@splinetool/viewer@1.0.76/build/spline-viewer.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<style>
+:root {
+  --purple: #7c3aed;
+  --violet: #8b5cf6;
+  --purple-light: #a78bfa;
+  --purple-glow: rgba(124,58,237,0.4);
+  --bg: #050508;
+  --bg2: #080812;
+  --text: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: rgba(139,92,246,0.15);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ─── STAR CANVAS (always visible, behind everything) ── */
+#bg-canvas {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  z-index: 0;
+  pointer-events: none;
+}
+#grain {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ─── SPLASH ─────────────────────────────────────────── */
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: transparent; /* stars canvas shows through */
+  overflow: hidden;
+}
+
+/* subtle grid overlay on top of stars */
+#splash-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124,58,237,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%);
+  pointer-events: none;
+}
+
+/* scan line */
+#splash-scan {
+  position: absolute;
+  left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.5), transparent);
+  animation: scanMove 5s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes scanMove {
+  from { top:-2px; opacity:0; }
+  4%   { opacity:1; }
+  96%  { opacity:1; }
+  to   { top:100%; opacity:0; }
+}
+
+/* ── ROBOT: fullscreen ── */
+#splash-robot-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+#splash-robot-wrap spline-viewer {
+  width: 100%;
+  height: 100%;
+  --background-color: transparent;
+}
+/* purple glow halo behind robot */
+#splash-glow {
+  position: absolute;
+  right: 4%; top: 15%;
+  width: 40%; height: 70%;
+  background: radial-gradient(ellipse 60% 70% at 55% 48%, rgba(124,107,255,0.18) 0%, transparent 70%);
+  animation: glowPulse 3.5s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 4;
+}
+@keyframes glowPulse {
+  from { opacity:0.7; transform:scale(1); }
+  to   { opacity:1;   transform:scale(1.08); }
+}
+
+/* ── bottom overlay: logo + bar + button ── */
+#splash-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 56px;
+  gap: 0;
+  /* gradient fade from transparent → dark at bottom */
+  background: linear-gradient(to top, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.7) 50%, transparent 100%);
+  padding-top: 80px;
+}
+#splash-logo {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  opacity: 0;
+  transform: translateY(10px);
+  margin-bottom: 6px;
+}
+#splash-tagline {
+  font-size: 12px;
+  color: rgba(148,163,184,0.7);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  opacity: 0;
+  margin-bottom: 28px;
+}
+#splash-bar-wrap {
+  width: 180px;
+  height: 2px;
+  background: rgba(139,92,246,0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  opacity: 0;
+  margin-bottom: 28px;
+}
+#splash-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7c3aed, #c084fc);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(124,58,237,0.8);
+}
+#splash-enter {
+  background: var(--purple);
+  color: white;
+  padding: 14px 48px;
+  border-radius: 100px;
+  font-size: 16px;
+  font-weight: 700;
+  border: 1px solid rgba(167,139,250,0.3);
+  cursor: pointer;
+  font-family: inherit;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+#splash-enter:hover {
+  background: #8b5cf6;
+  box-shadow: 0 8px 32px rgba(124,58,237,0.5);
+}
+
+/* ─── CURSOR ─────────────────────────────────────────── */
+#cursor {
+  position: fixed; width:12px; height:12px;
+  background: var(--violet); border-radius:50%;
+  pointer-events:none; z-index:99999;
+  transform:translate(-50%,-50%);
+  mix-blend-mode:screen;
+  transition: width .2s, height .2s;
+}
+#cursor-ring {
+  position: fixed; width:36px; height:36px;
+  border: 1.5px solid rgba(139,92,246,0.6); border-radius:50%;
+  pointer-events:none; z-index:99998;
+  transform:translate(-50%,-50%);
+  transition: width .15s, height .15s;
+}
+.cursor-trail {
+  position: fixed; width:6px; height:6px;
+  background: var(--purple-light); border-radius:50%;
+  pointer-events:none; z-index:99997;
+  transform:translate(-50%,-50%); opacity:0;
+}
+
+/* ─── NAV ────────────────────────────────────────────── */
+nav {
+  position:fixed; top:0; left:0; right:0; z-index:200;
+  padding:20px 48px;
+  display:flex; align-items:center; justify-content:space-between;
+  transition:all .4s;
+}
+nav.scrolled {
+  background:rgba(5,5,8,0.88);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:14px 48px;
+}
+.nav-logo {
+  font-size:20px; font-weight:800; letter-spacing:-.5px;
+  background:linear-gradient(135deg,#fff 0%,var(--purple-light) 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.nav-links { display:flex; gap:32px; list-style:none; }
+.nav-links a { color:var(--text-muted); text-decoration:none; font-size:14px; font-weight:500; transition:color .2s; }
+.nav-links a:hover { color:var(--text); }
+.nav-right { display:flex; align-items:center; gap:12px; }
+.lang-switch {
+  display:flex; align-items:center;
+  background:rgba(139,92,246,0.08);
+  border:1px solid var(--border);
+  border-radius:100px; overflow:hidden;
+}
+.lang-btn {
+  padding:7px 14px; cursor:pointer;
+  color:var(--text-muted); background:transparent; border:none;
+  font-size:13px; font-weight:700; font-family:inherit;
+  transition:all .2s; letter-spacing:.5px;
+}
+.lang-btn.active { background:var(--purple); color:white; border-radius:100px; }
+.lang-btn:not(.active):hover { color:var(--text); }
+.nav-cta {
+  background:var(--purple); color:white;
+  padding:10px 24px; border-radius:100px;
+  font-size:14px; font-weight:700; text-decoration:none;
+  border:1px solid rgba(167,139,250,0.3);
+  transition:all .2s;
+}
+.nav-cta:hover { background:var(--violet); transform:translateY(-1px); box-shadow:0 8px 32px var(--purple-glow); }
+
+/* ─── SECTIONS ───────────────────────────────────────── */
+section { position:relative; z-index:10; }
+
+/* ─── HERO ───────────────────────────────────────────── */
+#hero {
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:120px 24px 80px;
+}
+.hero-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(124,58,237,0.12); border:1px solid rgba(139,92,246,0.3);
+  padding:6px 16px; border-radius:100px;
+  font-size:13px; color:var(--purple-light);
+  margin-bottom:32px; opacity:0; transform:translateY(20px);
+}
+.hero-badge .dot { width:6px; height:6px; background:var(--purple-light); border-radius:50%; animation:dotPulse 2s infinite; }
+@keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+.hero-title {
+  font-size:clamp(48px,7vw,96px); font-weight:900;
+  line-height:1.0; letter-spacing:-3px;
+  margin-bottom:24px; max-width:900px;
+  opacity:0; transform:translateY(30px);
+}
+.hero-title .line1 { display:block; color:var(--text); }
+.hero-title .line2 {
+  display:block;
+  background:linear-gradient(135deg,var(--violet) 0%,#c084fc 50%,var(--purple-light) 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-size:200% 200%;
+  animation:gradShift 4s ease infinite;
+}
+@keyframes gradShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.tw-wrap { font-size:clamp(48px,7vw,96px); font-weight:900; letter-spacing:-3px; display:inline-block; min-width:300px; }
+#tw {
+  background:linear-gradient(135deg,var(--violet) 0%,#c084fc 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.tw-cur { display:inline-block; width:4px; height:.85em; background:var(--violet); margin-left:4px; vertical-align:middle; animation:blink .8s step-end infinite; }
+@keyframes blink { 50%{opacity:0} }
+.hero-sub { font-size:18px; color:var(--text-muted); max-width:520px; line-height:1.7; margin-bottom:48px; opacity:0; transform:translateY(20px); }
+.hero-actions { display:flex; gap:16px; align-items:center; opacity:0; transform:translateY(20px); }
+.btn-primary {
+  background:var(--purple); color:white;
+  padding:16px 36px; border-radius:100px;
+  font-size:16px; font-weight:700; text-decoration:none;
+  border:1px solid rgba(167,139,250,0.3);
+  position:relative; overflow:hidden; transition:all .3s;
+}
+.btn-primary::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent); transition:left .5s; }
+.btn-primary:hover::before { left:100%; }
+.btn-primary:hover { background:var(--violet); transform:translateY(-2px); box-shadow:0 16px 48px var(--purple-glow); }
+.btn-secondary { color:var(--text-muted); font-size:15px; font-weight:500; text-decoration:none; display:flex; align-items:center; gap:8px; transition:color .2s; }
+.btn-secondary:hover { color:var(--text); }
+.stats-bar {
+  display:flex; gap:64px; margin-top:80px; padding:32px 48px;
+  background:rgba(139,92,246,.05); border:1px solid var(--border); border-radius:20px;
+  opacity:0; transform:translateY(20px);
+}
+.stat-item { text-align:center; }
+.stat-number { font-size:36px; font-weight:800; background:linear-gradient(135deg,#fff 0%,var(--purple-light) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; display:block; }
+.stat-label { font-size:13px; color:var(--text-muted); margin-top:4px; }
+
+/* ─── WAVES ──────────────────────────────────────────── */
+.wave { line-height:0; margin:-2px 0; }
+.wave svg { display:block; width:100%; }
+
+/* ─── SHARED ─────────────────────────────────────────── */
+.s-label { font-size:12px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--violet); margin-bottom:16px; opacity:0; transform:translateY(20px); }
+.s-title { font-size:clamp(32px,4vw,56px); font-weight:800; letter-spacing:-1.5px; line-height:1.1; margin-bottom:16px; opacity:0; transform:translateY(20px); }
+.s-sub { font-size:17px; color:var(--text-muted); max-width:500px; line-height:1.7; margin-bottom:64px; opacity:0; transform:translateY(20px); }
+
+/* ─── SERVICES ───────────────────────────────────────── */
+#services { padding:120px 48px; background:var(--bg2); }
+.services-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:1100px; margin:0 auto; }
+.scard {
+  background:rgba(255,255,255,.02); border:1px solid var(--border);
+  border-radius:20px; padding:32px; position:relative; overflow:hidden;
+  transition:all .4s; opacity:0; transform:translateY(40px); cursor:pointer;
+}
+.scard::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(124,58,237,.09) 0%, transparent 60%); opacity:0; transition:opacity .3s; pointer-events:none; }
+.scard:hover::before { opacity:1; }
+.scard:hover { border-color:rgba(139,92,246,.4); box-shadow:0 24px 48px rgba(124,58,237,.15); }
+.scard-icon { width:48px; height:48px; background:rgba(124,58,237,.12); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:20px; border:1px solid rgba(139,92,246,.2); }
+.scard-title { font-size:17px; font-weight:700; margin-bottom:10px; }
+.scard-desc { font-size:14px; color:var(--text-muted); line-height:1.6; }
+
+/* ─── HOW ────────────────────────────────────────────── */
+#how { padding:120px 48px; text-align:center; }
+.steps { display:flex; gap:0; align-items:flex-start; max-width:900px; margin:0 auto; position:relative; }
+.steps-line { position:absolute; top:28px; left:calc(16.66% + 28px); right:calc(16.66% + 28px); height:2px; background:var(--border); z-index:0; }
+.steps-line-fill { height:100%; width:0%; background:linear-gradient(90deg,var(--purple),var(--violet)); transition:width 1.5s ease; box-shadow:0 0 12px var(--purple-glow); }
+.step { flex:1; text-align:center; padding:0 20px; position:relative; z-index:1; opacity:0; transform:translateY(30px); }
+.step-num { width:56px; height:56px; background:var(--bg); border:2px solid var(--purple); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:var(--violet); margin:0 auto 20px; box-shadow:0 0 24px var(--purple-glow); transition:all .3s; }
+.step:hover .step-num { background:var(--purple); color:white; transform:scale(1.1); }
+.step-title { font-size:18px; font-weight:700; margin-bottom:10px; }
+.step-desc { font-size:14px; color:var(--text-muted); line-height:1.6; }
+
+/* ─── INDUSTRIES ─────────────────────────────────────── */
+#industries { padding:120px 48px; background:var(--bg2); text-align:center; }
+.ind-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; max-width:900px; margin:0 auto; }
+.ind-card { background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:16px; padding:24px 16px; font-size:14px; font-weight:600; transition:all .3s; opacity:0; transform:perspective(800px) rotateY(30deg); cursor:pointer; }
+.ind-card:hover { background:rgba(124,58,237,.08); border-color:rgba(139,92,246,.4); color:var(--purple-light); transform:perspective(800px) rotateY(0deg) translateY(-4px) !important; }
+.ind-icon { font-size:28px; display:block; margin-bottom:10px; }
+
+/* ─── PRICING ────────────────────────────────────────── */
+#pricing { padding:120px 48px; text-align:center; }
+.pricing-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:960px; margin:0 auto; align-items:start; }
+.pcard { background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:24px; padding:40px 32px; position:relative; opacity:0; transform:translateY(60px); }
+.pcard.featured { background:rgba(124,58,237,.08); border-color:var(--purple); }
+.pcard.featured::before { content:''; position:absolute; inset:-1px; border-radius:24px; padding:1px; background:linear-gradient(135deg,var(--purple),#c084fc,var(--purple)); background-size:200% 200%; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:destination-out; mask-composite:exclude; animation:borderRot 3s linear infinite; }
+@keyframes borderRot { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.p-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--purple); color:white; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:4px 16px; border-radius:100px; white-space:nowrap; }
+.p-plan { font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--text-muted); margin-bottom:16px; }
+.p-price { font-size:52px; font-weight:900; letter-spacing:-2px; margin-bottom:8px; }
+.p-period { font-size:14px; color:var(--text-muted); margin-bottom:32px; }
+.p-features { list-style:none; text-align:left; margin-bottom:36px; }
+.p-features li { font-size:14px; color:var(--text-muted); padding:8px 0; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); }
+.p-features li:last-child { border-bottom:none; }
+.p-features li::before { content:'✓'; color:var(--violet); font-weight:700; flex-shrink:0; }
+.btn-p { width:100%; padding:14px; border-radius:12px; font-size:15px; font-weight:700; text-decoration:none; text-align:center; display:block; transition:all .3s; }
+.btn-p.out { border:1px solid var(--border); color:var(--text); }
+.btn-p.out:hover { border-color:var(--purple); color:var(--purple-light); }
+.btn-p.sol { background:var(--purple); color:white; border:none; }
+.btn-p.sol:hover { background:var(--violet); box-shadow:0 8px 32px var(--purple-glow); }
+
+/* ─── CLIENTS ────────────────────────────────────────── */
+#clients { padding:120px 48px; background:var(--bg2); }
+.clients-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:24px; max-width:900px; margin:0 auto; }
+.ccard { background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:24px; padding:40px; transition:all .4s; opacity:0; }
+.ccard:nth-child(1) { transform:translateX(-40px); }
+.ccard:nth-child(2) { transform:translateX(40px); }
+.ccard:hover { border-color:rgba(139,92,246,.4); box-shadow:0 16px 48px rgba(124,58,237,.1); }
+.cc-name { font-size:22px; font-weight:800; margin-bottom:8px; }
+.cc-type { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--violet); margin-bottom:20px; }
+.cc-result { font-size:42px; font-weight:900; background:linear-gradient(135deg,var(--violet),#c084fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:8px; }
+.cc-result-label { font-size:14px; color:var(--text-muted); margin-bottom:20px; }
+.cc-desc { font-size:14px; color:var(--text-muted); line-height:1.6; }
+
+/* ─── CTA ────────────────────────────────────────────── */
+#cta { padding:160px 48px; text-align:center; position:relative; overflow:hidden; }
+#cta::before { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:600px; height:600px; background:radial-gradient(circle,rgba(124,58,237,.15) 0%,transparent 70%); pointer-events:none; }
+.cta-title { font-size:clamp(40px,5vw,72px); font-weight:900; letter-spacing:-2px; line-height:1.05; margin-bottom:24px; opacity:0; transform:translateY(30px); }
+.cta-sub { font-size:18px; color:var(--text-muted); max-width:480px; margin:0 auto 48px; line-height:1.7; opacity:0; transform:translateY(20px); }
+.cta-actions { display:flex; gap:16px; justify-content:center; opacity:0; transform:translateY(20px); }
+.btn-email { display:flex; align-items:center; gap:10px; color:var(--text-muted); font-size:15px; text-decoration:none; border:1px solid var(--border); padding:16px 32px; border-radius:100px; transition:all .3s; }
+.btn-email:hover { border-color:var(--purple); color:var(--purple-light); }
+
+/* ─── FOOTER ─────────────────────────────────────────── */
+footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:relative; z-index:10; }
+.footer-logo { font-size:16px; font-weight:800; background:linear-gradient(135deg,#fff 0%,var(--purple-light) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.footer-copy { font-size:13px; color:var(--text-muted); }
+
+/* ─── SCROLL BAR ─────────────────────────────────────── */
+#scroll-bar { position:fixed; top:0; left:0; height:2px; background:linear-gradient(90deg,var(--purple),var(--violet),#c084fc); z-index:999; width:0%; box-shadow:0 0 8px var(--purple-glow); transition:width .1s linear; }
+</style>
+</head>
+<body>
+
+<!-- ══ STAR CANVAS (rendered first, always behind) ══ -->
+<canvas id="bg-canvas"></canvas>
+<div id="grain"></div>
+<div id="scroll-bar"></div>
+
+<!-- ══ CURSOR ══ -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- ══════════════════════════════════════
+     SPLASH SCREEN
+══════════════════════════════════════ -->
+<div id="splash">
+  <div id="splash-grid"></div>
+  <div id="splash-scan"></div>
+
+  <!-- Robot fullscreen -->
+  <div id="splash-robot-wrap">
+    <spline-viewer url="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"></spline-viewer>
+  </div>
+  <div id="splash-glow"></div>
+
+  <!-- Text + bar + button overlaid at bottom -->
+  <div id="splash-bottom">
+    <div id="splash-logo">ITO LabAgent</div>
+    <div id="splash-tagline">AI Automation Agency</div>
+    <div id="splash-bar-wrap"><div id="splash-bar-fill"></div></div>
+    <button id="splash-enter">Enter →</button>
+  </div>
+</div>
+
+<!-- ══ NAV ══ -->
+<nav id="navbar">
+  <div class="nav-logo">ITO LabAgent</div>
+  <ul class="nav-links">
+    <li><a href="#services" data-i18n="nav.services">Services</a></li>
+    <li><a href="#how" data-i18n="nav.how">How it works</a></li>
+    <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
+    <li><a href="#clients" data-i18n="nav.clients">Clients</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="lang-switch">
+      <button class="lang-btn active" id="btn-en">EN</button>
+      <button class="lang-btn" id="btn-es">ES</button>
+    </div>
+    <a href="mailto:itolabagent@gmail.com" class="nav-cta" data-i18n="nav.cta">Get started →</a>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section id="hero">
+  <div class="hero-badge"><span class="dot"></span><span data-i18n="hero.badge">AI-Powered Business Automation</span></div>
+  <h1 class="hero-title">
+    <span class="line1" data-i18n="hero.title1">We Automate</span>
+    <span class="tw-wrap"><span id="tw">Your Business</span><span class="tw-cur"></span></span>
+  </h1>
+  <p class="hero-sub" data-i18n="hero.sub">Monthly retainer. We implement AI automations, CRM systems, and custom bots — and handle everything so you don't have to.</p>
+  <div class="hero-actions">
+    <a href="mailto:itolabagent@gmail.com" class="btn-primary" data-i18n="hero.cta">Start automating →</a>
+    <a href="#how" class="btn-secondary" data-i18n="hero.cta2">See how it works ↓</a>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-item"><span class="stat-number" data-count="50">0</span><div class="stat-label" data-i18n="stats.1">Automations deployed</div></div>
+    <div class="stat-item"><span class="stat-number" data-count="12">0</span><div class="stat-label" data-i18n="stats.2">Clients automated</div></div>
+    <div class="stat-item"><span class="stat-number" data-count="80">0</span><div class="stat-label" data-i18n="stats.3">Hours saved / month avg.</div></div>
+    <div class="stat-item"><span class="stat-number" data-count="100">0</span><div class="stat-label" data-i18n="stats.4">% satisfaction rate</div></div>
+  </div>
+</section>
+
+<div class="wave"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="#080812"/></svg></div>
+
+<!-- ══ SERVICES ══ -->
+<section id="services">
+  <div style="max-width:1100px;margin:0 auto;text-align:center">
+    <div class="s-label" data-i18n="services.label">What we build</div>
+    <h2 class="s-title" data-i18n="services.title">Automation for any business</h2>
+    <p class="s-sub" style="margin:0 auto 64px" data-i18n="services.sub">CRM pipelines, AI bots, automated follow-ups — we build the system and run it for you.</p>
+  </div>
+  <div class="services-grid">
+    <div class="scard"><div class="scard-icon">⚡</div><div class="scard-title" data-i18n="s1.title">CRM Automation</div><div class="scard-desc" data-i18n="s1.desc">Full Go High Level setup — pipelines, follow-ups, lead capture, and workflows running 24/7.</div></div>
+    <div class="scard"><div class="scard-icon">🤖</div><div class="scard-title" data-i18n="s2.title">AI Chatbots</div><div class="scard-desc" data-i18n="s2.desc">Custom AI assistants that qualify leads, answer questions, and book appointments automatically.</div></div>
+    <div class="scard"><div class="scard-icon">📱</div><div class="scard-title" data-i18n="s3.title">WhatsApp Automation</div><div class="scard-desc" data-i18n="s3.desc">Automated follow-up sequences, confirmations, and reminders via WhatsApp.</div></div>
+    <div class="scard"><div class="scard-icon">🌐</div><div class="scard-title" data-i18n="s4.title">Web Design</div><div class="scard-desc" data-i18n="s4.desc">High-performance landing pages and full websites built with conversion and speed in mind.</div></div>
+    <div class="scard"><div class="scard-icon">📈</div><div class="scard-title" data-i18n="s5.title">Lead Generation</div><div class="scard-desc" data-i18n="s5.desc">Automated funnels that capture, score, and nurture leads from any traffic source.</div></div>
+    <div class="scard"><div class="scard-icon">🔗</div><div class="scard-title" data-i18n="s6.title">System Integrations</div><div class="scard-desc" data-i18n="s6.desc">Connect your tools — booking, payment, email, CRM — all in one automated flow.</div></div>
+  </div>
+</section>
+
+<div class="wave"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" fill="#050508"/></svg></div>
+
+<!-- ══ HOW ══ -->
+<section id="how">
+  <div class="s-label" data-i18n="how.label">Process</div>
+  <h2 class="s-title" data-i18n="how.title">3 steps to full automation</h2>
+  <p class="s-sub" style="max-width:460px;margin:0 auto 80px" data-i18n="how.sub">Simple onboarding. Fast delivery. Ongoing support included.</p>
+  <div class="steps">
+    <div class="steps-line"><div class="steps-line-fill" id="stepsLine"></div></div>
+    <div class="step"><div class="step-num">01</div><div class="step-title" data-i18n="step1.title">Audit & Strategy</div><div class="step-desc" data-i18n="step1.desc">We map your processes and identify where AI saves you the most time and money.</div></div>
+    <div class="step"><div class="step-num">02</div><div class="step-title" data-i18n="step2.title">Build & Integrate</div><div class="step-desc" data-i18n="step2.desc">We build your custom automation stack and integrate it with your existing tools.</div></div>
+    <div class="step"><div class="step-num">03</div><div class="step-title" data-i18n="step3.title">Run & Optimize</div><div class="step-desc" data-i18n="step3.desc">We monitor, maintain, and improve your automations. Monthly retainer, zero headaches.</div></div>
+  </div>
+</section>
+
+<div class="wave"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="#080812"/></svg></div>
+
+<!-- ══ INDUSTRIES ══ -->
+<section id="industries">
+  <div class="s-label" data-i18n="ind.label">Industries</div>
+  <h2 class="s-title" data-i18n="ind.title">Any business. Any size.</h2>
+  <p class="s-sub" style="max-width:400px;margin:0 auto 64px" data-i18n="ind.sub">We've automated businesses across every sector.</p>
+  <div class="ind-grid">
+    <div class="ind-card"><span class="ind-icon">💇</span><span data-i18n="i1">Beauty & Salons</span></div>
+    <div class="ind-card"><span class="ind-icon">🏥</span><span data-i18n="i2">Clinics & Health</span></div>
+    <div class="ind-card"><span class="ind-icon">🛍️</span><span data-i18n="i3">E-commerce</span></div>
+    <div class="ind-card"><span class="ind-icon">🍽️</span><span data-i18n="i4">Restaurants</span></div>
+    <div class="ind-card"><span class="ind-icon">🏠</span><span data-i18n="i5">Real Estate</span></div>
+    <div class="ind-card"><span class="ind-icon">📚</span><span data-i18n="i6">Coaches & Creators</span></div>
+    <div class="ind-card"><span class="ind-icon">🏋️</span><span data-i18n="i7">Gyms & Fitness</span></div>
+    <div class="ind-card"><span class="ind-icon">⚖️</span><span data-i18n="i8">Legal & Finance</span></div>
+  </div>
+</section>
+
+<div class="wave"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" fill="#050508"/></svg></div>
+
+<!-- ══ PRICING ══ -->
+<section id="pricing">
+  <div class="s-label" data-i18n="pricing.label">Pricing</div>
+  <h2 class="s-title" data-i18n="pricing.title">Simple monthly plans</h2>
+  <p class="s-sub" style="max-width:440px;margin:0 auto 64px" data-i18n="pricing.sub">No setup fees. No surprises. Cancel anytime.</p>
+  <div class="pricing-grid">
+    <div class="pcard">
+      <div class="p-plan" data-i18n="p1.plan">Starter</div><div class="p-price">€497</div><div class="p-period" data-i18n="p1.period">/ month</div>
+      <ul class="p-features"><li data-i18n="p1.f1">CRM setup & automation</li><li data-i18n="p1.f2">1 AI chatbot</li><li data-i18n="p1.f3">WhatsApp follow-ups</li><li data-i18n="p1.f4">Monthly optimization</li><li data-i18n="p1.f5">Email support</li></ul>
+      <a href="mailto:itolabagent@gmail.com" class="btn-p out" data-i18n="p1.cta">Get started</a>
+    </div>
+    <div class="pcard featured">
+      <div class="p-badge" data-i18n="p2.badge">Most Popular</div>
+      <div class="p-plan" data-i18n="p2.plan">Growth</div><div class="p-price">€997</div><div class="p-period" data-i18n="p2.period">/ month</div>
+      <ul class="p-features"><li data-i18n="p2.f1">Everything in Starter</li><li data-i18n="p2.f2">3 AI chatbots / bots</li><li data-i18n="p2.f3">Full funnel build</li><li data-i18n="p2.f4">Web design included</li><li data-i18n="p2.f5">Priority support</li><li data-i18n="p2.f6">Weekly optimization calls</li></ul>
+      <a href="mailto:itolabagent@gmail.com" class="btn-p sol" data-i18n="p2.cta">Get started</a>
+    </div>
+    <div class="pcard">
+      <div class="p-plan" data-i18n="p3.plan">Enterprise</div><div class="p-price">Custom</div><div class="p-period" data-i18n="p3.period">tailored to you</div>
+      <ul class="p-features"><li data-i18n="p3.f1">Everything in Growth</li><li data-i18n="p3.f2">Unlimited automations</li><li data-i18n="p3.f3">Dedicated agent team</li><li data-i18n="p3.f4">Custom AI development</li><li data-i18n="p3.f5">24/7 monitoring</li></ul>
+      <a href="mailto:itolabagent@gmail.com" class="btn-p out" data-i18n="p3.cta">Contact us</a>
+    </div>
+  </div>
+</section>
+
+<div class="wave"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="#080812"/></svg></div>
+
+<!-- ══ CLIENTS ══ -->
+<section id="clients">
+  <div style="max-width:900px;margin:0 auto;text-align:center">
+    <div class="s-label" data-i18n="clients.label">Clients</div>
+    <h2 class="s-title" data-i18n="clients.title">Real results. Real businesses.</h2>
+    <p class="s-sub" style="margin:0 auto 64px" data-i18n="clients.sub">Our clients automate more, earn more, and stress less.</p>
+  </div>
+  <div class="clients-grid">
+    <div class="ccard"><div class="cc-name" data-i18n="c1.name">Victoria Stylos</div><div class="cc-type" data-i18n="c1.type">Beauty Salon · Spain</div><div class="cc-result" data-i18n="c1.result">+340%</div><div class="cc-result-label" data-i18n="c1.rl">increase in booked appointments</div><div class="cc-desc" data-i18n="c1.desc">Full GHL automation — WhatsApp follow-ups, appointment confirmations, automated reminders. Zero manual work for the team.</div></div>
+    <div class="ccard"><div class="cc-name" data-i18n="c2.name">SHAMS Jewellery</div><div class="cc-type" data-i18n="c2.type">Luxury Jewellery · London</div><div class="cc-result" data-i18n="c2.result">2× ROI</div><div class="cc-result-label" data-i18n="c2.rl">in first 60 days</div><div class="cc-desc" data-i18n="c2.desc">Bilingual e-commerce website (EN/ES), automated product catalog, and lead nurturing for high-ticket sales.</div></div>
+  </div>
+</section>
+
+<div class="wave"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,30 C360,0 1080,60 1440,30 L1440,60 L0,60 Z" fill="#050508"/></svg></div>
+
+<!-- ══ CTA ══ -->
+<section id="cta">
+  <h2 class="cta-title"><span data-i18n="cta.title1">Ready to automate</span><br><span style="background:linear-gradient(135deg,var(--violet),#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" data-i18n="cta.title2">your business?</span></h2>
+  <p class="cta-sub" data-i18n="cta.sub">Join the businesses running on AI. Monthly retainer. No fluff. Just results.</p>
+  <div class="cta-actions">
+    <a href="mailto:itolabagent@gmail.com" class="btn-primary" style="font-size:17px;padding:18px 44px" data-i18n="cta.btn">Start today →</a>
+    <a href="mailto:itolabagent@gmail.com" class="btn-email"><span>✉</span>itolabagent@gmail.com</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">ITO LabAgent</div>
+  <div class="footer-copy" data-i18n="footer.copy">© 2026 ITO LabAgent. All rights reserved.</div>
+</footer>
+
+<!-- ══════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────
+// i18n — language switcher EN / ES
+// ─────────────────────────────────────
+(function initI18n() {
+  var T = {
+    en: {
+      'nav.services':'Services','nav.how':'How it works','nav.pricing':'Pricing','nav.clients':'Clients','nav.cta':'Get started →',
+      'hero.badge':'AI-Powered Business Automation','hero.title1':'We Automate',
+      'hero.sub':"Monthly retainer. We implement AI automations, CRM systems, and custom bots — and handle everything so you don't have to.",
+      'hero.cta':'Start automating →','hero.cta2':'See how it works ↓',
+      'stats.1':'Automations deployed','stats.2':'Clients automated','stats.3':'Hours saved / month avg.','stats.4':'% satisfaction rate',
+      'services.label':'What we build','services.title':'Automation for any business','services.sub':'CRM pipelines, AI bots, automated follow-ups — we build the system and run it for you.',
+      's1.title':'CRM Automation','s1.desc':'Full Go High Level setup — pipelines, follow-ups, lead capture, and workflows running 24/7.',
+      's2.title':'AI Chatbots','s2.desc':'Custom AI assistants that qualify leads, answer questions, and book appointments automatically.',
+      's3.title':'WhatsApp Automation','s3.desc':'Automated follow-up sequences, confirmations, and reminders via WhatsApp.',
+      's4.title':'Web Design','s4.desc':'High-performance landing pages and full websites built with conversion and speed in mind.',
+      's5.title':'Lead Generation','s5.desc':'Automated funnels that capture, score, and nurture leads from any traffic source.',
+      's6.title':'System Integrations','s6.desc':'Connect your tools — booking, payment, email, CRM — all in one automated flow.',
+      'how.label':'Process','how.title':'3 steps to full automation','how.sub':'Simple onboarding. Fast delivery. Ongoing support included.',
+      'step1.title':'Audit & Strategy','step1.desc':'We map your processes and identify where AI saves you the most time and money.',
+      'step2.title':'Build & Integrate','step2.desc':'We build your custom automation stack and integrate it with your existing tools.',
+      'step3.title':'Run & Optimize','step3.desc':'We monitor, maintain, and improve your automations. Monthly retainer, zero headaches.',
+      'ind.label':'Industries','ind.title':'Any business. Any size.','ind.sub':"We've automated businesses across every sector.",
+      'i1':'Beauty & Salons','i2':'Clinics & Health','i3':'E-commerce','i4':'Restaurants','i5':'Real Estate','i6':'Coaches & Creators','i7':'Gyms & Fitness','i8':'Legal & Finance',
+      'pricing.label':'Pricing','pricing.title':'Simple monthly plans','pricing.sub':'No setup fees. No surprises. Cancel anytime.',
+      'p1.plan':'Starter','p1.period':'/ month','p1.f1':'CRM setup & automation','p1.f2':'1 AI chatbot','p1.f3':'WhatsApp follow-ups','p1.f4':'Monthly optimization','p1.f5':'Email support','p1.cta':'Get started',
+      'p2.plan':'Growth','p2.period':'/ month','p2.badge':'Most Popular','p2.f1':'Everything in Starter','p2.f2':'3 AI chatbots / bots','p2.f3':'Full funnel build','p2.f4':'Web design included','p2.f5':'Priority support','p2.f6':'Weekly optimization calls','p2.cta':'Get started',
+      'p3.plan':'Enterprise','p3.period':'tailored to you','p3.f1':'Everything in Growth','p3.f2':'Unlimited automations','p3.f3':'Dedicated agent team','p3.f4':'Custom AI development','p3.f5':'24/7 monitoring','p3.cta':'Contact us',
+      'clients.label':'Clients','clients.title':'Real results. Real businesses.','clients.sub':'Our clients automate more, earn more, and stress less.',
+      'c1.name':'Victoria Stylos','c1.type':'Beauty Salon · Spain','c1.result':'+340%','c1.rl':'increase in booked appointments','c1.desc':'Full GHL automation — WhatsApp follow-ups, appointment confirmations, automated reminders. Zero manual work for the team.',
+      'c2.name':'SHAMS Jewellery','c2.type':'Luxury Jewellery · London','c2.result':'2× ROI','c2.rl':'in first 60 days','c2.desc':'Bilingual e-commerce website (EN/ES), automated product catalog, and lead nurturing for high-ticket sales.',
+      'cta.title1':'Ready to automate','cta.title2':'your business?','cta.sub':'Join the businesses running on AI. Monthly retainer. No fluff. Just results.','cta.btn':'Start today →',
+      'footer.copy':'© 2026 ITO LabAgent. All rights reserved.',
+      'tw.words':'Your Business,Your CRM,Your Leads,Your Follow-ups,Everything'
+    },
+    es: {
+      'nav.services':'Servicios','nav.how':'Cómo funciona','nav.pricing':'Precios','nav.clients':'Clientes','nav.cta':'Empezar →',
+      'hero.badge':'Automatización empresarial con IA','hero.title1':'Automatizamos',
+      'hero.sub':'Retainer mensual. Implementamos automatizaciones con IA, sistemas CRM y bots personalizados — y nos encargamos de todo por ti.',
+      'hero.cta':'Empieza a automatizar →','hero.cta2':'Cómo funciona ↓',
+      'stats.1':'Automatizaciones desplegadas','stats.2':'Clientes automatizados','stats.3':'Horas ahorradas / mes (media)','stats.4':'% tasa de satisfacción',
+      'services.label':'Lo que construimos','services.title':'Automatización para cualquier negocio','services.sub':'Pipelines de CRM, bots de IA, seguimientos automáticos — construimos el sistema y lo gestionamos por ti.',
+      's1.title':'Automatización CRM','s1.desc':'Configuración completa de Go High Level — pipelines, seguimientos, captación de leads y flujos de trabajo 24/7.',
+      's2.title':'Chatbots con IA','s2.desc':'Asistentes de IA personalizados que califican leads, responden preguntas y reservan citas automáticamente.',
+      's3.title':'Automatización WhatsApp','s3.desc':'Secuencias de seguimiento automatizadas, confirmaciones y recordatorios vía WhatsApp.',
+      's4.title':'Diseño Web','s4.desc':'Landing pages y webs completas de alto rendimiento diseñadas con conversión y velocidad en mente.',
+      's5.title':'Generación de Leads','s5.desc':'Funnels automatizados que capturan, puntúan y nutren leads de cualquier fuente de tráfico.',
+      's6.title':'Integraciones','s6.desc':'Conecta tus herramientas — reservas, pagos, email, CRM — en un único flujo automatizado.',
+      'how.label':'Proceso','how.title':'3 pasos para la automatización completa','how.sub':'Onboarding sencillo. Entrega rápida. Soporte continuo incluido.',
+      'step1.title':'Auditoría y Estrategia','step1.desc':'Mapeamos tus procesos e identificamos dónde la IA te ahorra más tiempo y dinero.',
+      'step2.title':'Construcción e Integración','step2.desc':'Construimos tu stack de automatización personalizado y lo integramos con tus herramientas actuales.',
+      'step3.title':'Gestión y Optimización','step3.desc':'Monitorizamos, mantenemos y mejoramos tus automatizaciones. Retainer mensual, sin complicaciones.',
+      'ind.label':'Sectores','ind.title':'Cualquier negocio. Cualquier tamaño.','ind.sub':'Hemos automatizado negocios en todos los sectores.',
+      'i1':'Belleza y Peluquerías','i2':'Clínicas y Salud','i3':'E-commerce','i4':'Restaurantes','i5':'Inmobiliaria','i6':'Coaches y Creadores','i7':'Gimnasios y Fitness','i8':'Legal y Finanzas',
+      'pricing.label':'Precios','pricing.title':'Planes mensuales simples','pricing.sub':'Sin tarifas de configuración. Sin sorpresas. Cancela cuando quieras.',
+      'p1.plan':'Starter','p1.period':'/ mes','p1.f1':'Configuración y automatización CRM','p1.f2':'1 chatbot de IA','p1.f3':'Seguimientos por WhatsApp','p1.f4':'Optimización mensual','p1.f5':'Soporte por email','p1.cta':'Empezar',
+      'p2.plan':'Growth','p2.period':'/ mes','p2.badge':'Más Popular','p2.f1':'Todo lo de Starter','p2.f2':'3 chatbots / bots de IA','p2.f3':'Funnel completo','p2.f4':'Diseño web incluido','p2.f5':'Soporte prioritario','p2.f6':'Llamadas semanales de optimización','p2.cta':'Empezar',
+      'p3.plan':'Enterprise','p3.period':'adaptado a ti','p3.f1':'Todo lo de Growth','p3.f2':'Automatizaciones ilimitadas','p3.f3':'Equipo dedicado','p3.f4':'Desarrollo de IA personalizado','p3.f5':'Monitorización 24/7','p3.cta':'Contáctanos',
+      'clients.label':'Clientes','clients.title':'Resultados reales. Negocios reales.','clients.sub':'Nuestros clientes automatizan más, ganan más y se estresan menos.',
+      'c1.name':'Victoria Stylos','c1.type':'Salón de Belleza · España','c1.result':'+340%','c1.rl':'aumento en citas reservadas','c1.desc':'Automatización completa GHL — seguimientos por WhatsApp, confirmaciones de citas, recordatorios automáticos. Cero trabajo manual para el equipo.',
+      'c2.name':'SHAMS Jewellery','c2.type':'Joyería de Lujo · Londres','c2.result':'2× ROI','c2.rl':'en los primeros 60 días','c2.desc':'Web bilingüe (EN/ES), catálogo automatizado y sistema de nurturing para ventas de alto valor.',
+      'cta.title1':'¿Listo para automatizar','cta.title2':'tu negocio?','cta.sub':'Únete a los negocios que funcionan con IA. Retainer mensual. Sin rodeos. Solo resultados.','cta.btn':'Empezar hoy →',
+      'footer.copy':'© 2026 ITO LabAgent. Todos los derechos reservados.',
+      'tw.words':'Tu Negocio,Tu CRM,Tus Leads,Tus Seguimientos,Todo'
+    }
+  };
+
+  window._twWords = T.en['tw.words'].split(',');
+
+  window.setLang = function(lang) {
+    var t = T[lang];
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      var key = el.getAttribute('data-i18n');
+      if (t[key] !== undefined) el.textContent = t[key];
+    });
+    window._twWords = t['tw.words'].split(',');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+    gsap.fromTo('section, footer, nav', { opacity:0.6 }, { opacity:1, duration:0.4, ease:'power2.out' });
+  };
+
+  document.getElementById('btn-en').addEventListener('click', function(){ window.setLang('en'); });
+  document.getElementById('btn-es').addEventListener('click', function(){ window.setLang('es'); });
+})();
+
+// ─────────────────────────────────────
+// CANVAS 2D STARS — no CDN dependency
+// ─────────────────────────────────────
+(function initStars() {
+  var canvas = document.getElementById('bg-canvas');
+  var ctx = canvas.getContext('2d');
+  var W, H;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // generate stars
+  var STAR_COUNT = 300;
+  var stars = [];
+  for (var i = 0; i < STAR_COUNT; i++) {
+    stars.push({
+      x:     Math.random(),
+      y:     Math.random(),
+      r:     0.4 + Math.random() * 2.2,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.4 + Math.random() * 1.2,
+      layer: Math.floor(Math.random() * 4)  // 0=far, 3=close
+    });
+  }
+
+  // shooting stars
+  var shoots = [];
+  var lastShoot = 0;
+  function spawnShoot() {
+    shoots.push({
+      x:  Math.random() * W,
+      y:  Math.random() * H * 0.5,
+      vx: -(4 + Math.random() * 5),
+      vy:  (1 + Math.random() * 2),
+      len: 80 + Math.random() * 120,
+      life: 1.0,
+      decay: 0.018 + Math.random() * 0.018
+    });
+  }
+
+  // aurora blobs
+  var blobs = [
+    { ox:0.3, oy:0.35, rx:0.22, ry:0.18, px:0.0, py:0.0, spx:0.0004, spy:0.0003 },
+    { ox:0.65,oy:0.45, rx:0.18, ry:0.14, px:1.0, py:1.0, spx:-0.0003,spy:0.0005 },
+    { ox:0.5, oy:0.6,  rx:0.15, ry:0.12, px:2.0, py:0.5, spx:0.0005, spy:-0.0004 }
+  ];
+
+  var tmx = 0, tmy = 0, cmx = 0, cmy = 0;
+  document.addEventListener('mousemove', function(e) {
+    tmx = (e.clientX / window.innerWidth  - 0.5);
+    tmy = (e.clientY / window.innerHeight - 0.5);
+  });
+
+  var t = 0;
+  function draw() {
+    requestAnimationFrame(draw);
+    t += 0.016;
+    cmx += (tmx - cmx) * 0.04;
+    cmy += (tmy - cmy) * 0.04;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // ── aurora glows ──
+    blobs.forEach(function(b) {
+      b.px += b.spx; b.py += b.spy;
+      var cx = (b.ox + Math.sin(b.px) * 0.12 + cmx * 0.04) * W;
+      var cy = (b.oy + Math.cos(b.py) * 0.1  + cmy * 0.04) * H;
+      var grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, b.rx * W);
+      grd.addColorStop(0,   'rgba(100, 50, 220, 0.11)');
+      grd.addColorStop(0.5, 'rgba(80,  30, 180, 0.06)');
+      grd.addColorStop(1,   'rgba(0,   0,  0,   0)');
+      ctx.save();
+      ctx.scale(1, b.ry / b.rx);
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(cx, cy * (b.rx / b.ry), b.rx * W, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // ── stars ──
+    stars.forEach(function(s) {
+      var parallax = (s.layer + 1) * 0.015;
+      var px = s.x * W + cmx * parallax * W;
+      var py = s.y * H + cmy * parallax * H;
+      // wrap around
+      if (px < 0) px += W; if (px > W) px -= W;
+      if (py < 0) py += H; if (py > H) py -= H;
+
+      var twinkle = 0.4 + 0.6 * Math.abs(Math.sin(t * s.speed + s.phase));
+      var radius  = s.r * (0.7 + 0.3 * twinkle);
+
+      // glow
+      var grd = ctx.createRadialGradient(px, py, 0, px, py, radius * 4);
+      grd.addColorStop(0,   'rgba(255, 240, 255, ' + (twinkle * 0.9) + ')');
+      grd.addColorStop(0.3, 'rgba(180, 140, 255, ' + (twinkle * 0.4) + ')');
+      grd.addColorStop(1,   'rgba(100,  60, 220, 0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(px, py, radius * 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // core
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + twinkle + ')';
+      ctx.beginPath();
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // ── shooting stars ──
+    if (t - lastShoot > 3 + Math.random() * 4) {
+      spawnShoot();
+      lastShoot = t;
+    }
+    for (var i = shoots.length - 1; i >= 0; i--) {
+      var s = shoots[i];
+      s.life -= s.decay;
+      if (s.life <= 0) { shoots.splice(i, 1); continue; }
+      var alpha = s.life * 0.9;
+      var grd = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * s.len * 0.2, s.y - s.vy * s.len * 0.2);
+      grd.addColorStop(0,   'rgba(220, 200, 255, ' + alpha + ')');
+      grd.addColorStop(1,   'rgba(140,  90, 255, 0)');
+      ctx.strokeStyle = grd;
+      ctx.lineWidth = 1.5 * s.life;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - s.vx * s.len * 0.2, s.y - s.vy * s.len * 0.2);
+      ctx.stroke();
+      s.x += s.vx * 2.5;
+      s.y += s.vy * 2.5;
+    }
+  }
+  draw();
+})();
+
+// ─────────────────────────────────────
+// CURSOR
+// ─────────────────────────────────────
+(function initCursor() {
+  var cursor = document.getElementById('cursor');
+  var ring   = document.getElementById('cursor-ring');
+  var mx=0,my=0,rx=0,ry=0;
+  var trails=[];
+  for(var i=0;i<12;i++){
+    var t=document.createElement('div'); t.className='cursor-trail';
+    document.body.appendChild(t); trails.push({el:t,x:0,y:0});
+  }
+  document.addEventListener('mousemove',function(e){
+    mx=e.clientX; my=e.clientY;
+    cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+  });
+  (function loop(){
+    rx+=(mx-rx)*0.12; ry+=(my-ry)*0.12;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    for(var i=trails.length-1;i>0;i--){
+      trails[i].x+=(trails[i-1].x-trails[i].x)*0.3;
+      trails[i].y+=(trails[i-1].y-trails[i].y)*0.3;
+      trails[i].el.style.left=trails[i].x+'px';
+      trails[i].el.style.top=trails[i].y+'px';
+      trails[i].el.style.opacity=(1-i/trails.length)*0.45;
+    }
+    trails[0].x+=(mx-trails[0].x)*0.4;
+    trails[0].y+=(my-trails[0].y)*0.4;
+    requestAnimationFrame(loop);
+  })();
+  document.querySelectorAll('a,button').forEach(function(el){
+    el.addEventListener('mouseenter',function(){ cursor.style.width='20px';cursor.style.height='20px';ring.style.width='52px';ring.style.height='52px'; });
+    el.addEventListener('mouseleave',function(){ cursor.style.width='12px';cursor.style.height='12px';ring.style.width='36px';ring.style.height='36px'; });
+  });
+  document.addEventListener('click',function(e){
+    for(var i=0;i<12;i++){
+      var sp=document.createElement('div');
+      sp.style.cssText='position:fixed;width:4px;height:4px;background:hsl('+(260+Math.random()*40)+',80%,75%);border-radius:50%;pointer-events:none;z-index:99999;left:'+e.clientX+'px;top:'+e.clientY+'px;';
+      document.body.appendChild(sp);
+      var ang=(i/12)*Math.PI*2,dist=40+Math.random()*40;
+      gsap.to(sp,{x:Math.cos(ang)*dist,y:Math.sin(ang)*dist,opacity:0,scale:0,duration:0.6,ease:'power2.out',onComplete:function(){this.targets()[0].remove();}});
+    }
+  });
+})();
+
+// ─────────────────────────────────────
+// SPLASH
+// ─────────────────────────────────────
+(function initSplash() {
+  var splash   = document.getElementById('splash');
+  var logo     = document.getElementById('splash-logo');
+  var tagline  = document.getElementById('splash-tagline');
+  var barWrap  = document.getElementById('splash-bar-wrap');
+  var barFill  = document.getElementById('splash-bar-fill');
+  var enterBtn = document.getElementById('splash-enter');
+
+  gsap.timeline()
+    .to(logo,    { opacity:1, y:0, duration:0.8, ease:'power3.out', delay:0.8 })
+    .to(tagline, { opacity:1,      duration:0.6, ease:'power2.out' }, '-=0.3')
+    .to(barWrap, { opacity:1,      duration:0.4 }, '-=0.2')
+    .to(barFill, { width:'100%',   duration:2.2, ease:'power1.inOut' }, '-=0.1')
+    .to(enterBtn,{ opacity:1, y:0, duration:0.6, ease:'back.out(1.5)' }, '-=0.4');
+
+  function enter() {
+    gsap.to(splash, {
+      opacity:0, scale:1.04, duration:0.7, ease:'power3.inOut',
+      onComplete: function() {
+        splash.style.display = 'none';
+        // hero entrance
+        gsap.timeline()
+          .to('.hero-badge',   { opacity:1, y:0, duration:0.7, ease:'power3.out' })
+          .to('.hero-title',   { opacity:1, y:0, duration:0.9, ease:'power3.out' }, '-=0.4')
+          .to('.hero-sub',     { opacity:1, y:0, duration:0.7, ease:'power3.out' }, '-=0.5')
+          .to('.hero-actions', { opacity:1, y:0, duration:0.7, ease:'power3.out' }, '-=0.4')
+          .to('.stats-bar',    { opacity:1, y:0, duration:0.7, ease:'power3.out' }, '-=0.3');
+      }
+    });
+  }
+
+  enterBtn.addEventListener('click', enter);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && splash.style.display !== 'none') enter();
+  });
+})();
+
+// ─────────────────────────────────────
+// SCROLL ANIMATIONS
+// ─────────────────────────────────────
+gsap.registerPlugin(ScrollTrigger);
+
+document.querySelectorAll('.s-label,.s-title,.s-sub').forEach(function(el) {
+  gsap.to(el, { opacity:1, y:0, duration:0.8, ease:'power3.out', scrollTrigger:{ trigger:el, start:'top 85%' } });
+});
+
+ScrollTrigger.create({ trigger:'.stats-bar', start:'top 80%', onEnter:function() {
+  document.querySelectorAll('.stat-number').forEach(function(el) {
+    var target = parseInt(el.dataset.count);
+    gsap.to({v:0},{v:target,duration:2,ease:'power2.out',onUpdate:function(){ el.textContent=Math.floor(this.targets()[0].v); }});
+  });
+}});
+
+var angles=[{x:-60,y:40,r:-3},{x:0,y:60,r:0},{x:60,y:40,r:3},{x:-60,y:40,r:3},{x:0,y:60,r:0},{x:60,y:40,r:-3}];
+document.querySelectorAll('.scard').forEach(function(card,i) {
+  gsap.fromTo(card,{opacity:0,x:angles[i].x,y:angles[i].y,rotation:angles[i].r},{opacity:1,x:0,y:0,rotation:0,duration:0.8,ease:'back.out(1.4)',delay:(i%3)*0.1,scrollTrigger:{trigger:card,start:'top 85%'}});
+  card.addEventListener('mousemove',function(e){ var r=card.getBoundingClientRect(); card.style.setProperty('--mx',((e.clientX-r.left)/r.width*100)+'%'); card.style.setProperty('--my',((e.clientY-r.top)/r.height*100)+'%'); });
+});
+
+document.querySelectorAll('.step').forEach(function(step,i) {
+  gsap.to(step,{opacity:1,y:0,duration:0.7,ease:'back.out(1.5)',delay:i*0.2,scrollTrigger:{trigger:'.steps',start:'top 75%',onEnter:function(){ document.getElementById('stepsLine').style.width='100%'; }}});
+});
+
+document.querySelectorAll('.ind-card').forEach(function(card,i) {
+  gsap.to(card,{opacity:1,rotateY:0,duration:0.6,ease:'back.out(1.2)',delay:(i%4)*0.08,scrollTrigger:{trigger:card,start:'top 85%'}});
+});
+
+document.querySelectorAll('.pcard').forEach(function(card,i) {
+  gsap.to(card,{opacity:1,y:0,duration:0.9,ease:'bounce.out',delay:i*0.15,scrollTrigger:{trigger:'.pricing-grid',start:'top 80%'}});
+});
+
+document.querySelectorAll('.ccard').forEach(function(card,i) {
+  gsap.to(card,{opacity:1,x:0,duration:0.8,ease:'power3.out',delay:i*0.2,scrollTrigger:{trigger:'.clients-grid',start:'top 80%'}});
+});
+
+['cta-title','cta-sub','cta-actions'].forEach(function(cls,i) {
+  gsap.to('.'+cls,{opacity:1,y:0,duration:0.8,ease:'power3.out',delay:i*0.15,scrollTrigger:{trigger:'#cta',start:'top 75%'}});
+});
+
+// scroll progress
+window.addEventListener('scroll',function() {
+  document.getElementById('scroll-bar').style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';
+});
+
+// nav
+window.addEventListener('scroll',function() {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 40);
+});
+
+// magnetic
+document.querySelectorAll('.btn-primary,.nav-cta,.btn-p').forEach(function(btn) {
+  btn.addEventListener('mousemove',function(e){ var r=btn.getBoundingClientRect(); btn.style.transform='translate('+(e.clientX-r.left-r.width/2)*0.15+'px,'+(e.clientY-r.top-r.height/2)*0.15+'px)'; });
+  btn.addEventListener('mouseleave',function(){ btn.style.transform=''; });
+});
+
+// 3D tilt
+document.querySelectorAll('.scard,.ccard,.pcard,.ind-card').forEach(function(card) {
+  card.addEventListener('mousemove',function(e){ var r=card.getBoundingClientRect(); var x=(e.clientX-r.left)/r.width-0.5; var y=(e.clientY-r.top)/r.height-0.5; card.style.transform='perspective(600px) rotateX('+(-y*8)+'deg) rotateY('+(x*8)+'deg) translateY(-4px)'; });
+  card.addEventListener('mouseleave',function(){ card.style.transform=''; });
+});
+
+// ─────────────────────────────────────
+// TYPEWRITER
+// ─────────────────────────────────────
+(function initTypewriter() {
+  var wi=0, ci=0, del=false;
+  var el = document.getElementById('tw');
+  function loop() {
+    var words = window._twWords || ['Your Business','Your CRM','Your Leads','Everything'];
+    // reset index if lang changed and index out of bounds
+    if (wi >= words.length) wi = 0;
+    var w = words[wi];
+    if (!del) {
+      el.textContent = w.slice(0, ++ci);
+      if (ci === w.length) { del = true; setTimeout(loop, 2000); return; }
+    } else {
+      el.textContent = w.slice(0, --ci);
+      if (ci === 0) { del = false; wi = (wi + 1) % words.length; }
+    }
+    setTimeout(loop, del ? 50 : 80);
+  }
+  setTimeout(loop, 1500);
+})();
+</script>
+</body>
+</html>
