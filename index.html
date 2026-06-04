@@ -606,9 +606,9 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
   <!-- Text + bar + button overlaid at bottom -->
   <div id="splash-bottom">
     <div id="splash-logo">ITO LabAgent</div>
-    <div id="splash-tagline">AI Automation Agency</div>
+    <div id="splash-tagline" data-i18n="splash.tagline">AI Automation Agency</div>
     <div id="splash-bar-wrap"><div id="splash-bar-fill"></div></div>
-    <button id="splash-enter">Enter →</button>
+    <button id="splash-enter" data-i18n="splash.enter">Enter →</button>
   </div>
 </div>
 
@@ -819,6 +819,7 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
 (function initI18n() {
   var T = {
     en: {
+      'splash.tagline':'AI Automation Agency','splash.enter':'Enter →',
       'nav.services':'Services','nav.how':'How it works','nav.pricing':'Pricing','nav.clients':'Clients','nav.cta':'Get started →',
       'hero.badge':'AI-Powered Business Automation','hero.title1':'We Automate',
       'hero.sub':"Monthly retainer. We implement AI automations, CRM systems, and custom bots — and handle everything so you don't have to.",
@@ -850,6 +851,7 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
       'success.title':'Message sent!','success.text':'We\'ll respond within 24 hours.'
     },
     es: {
+      'splash.tagline':'Agencia de Automatización IA','splash.enter':'Entrar →',
       'nav.services':'Servicios','nav.how':'Cómo funciona','nav.pricing':'Precios','nav.clients':'Clientes','nav.cta':'Empezar →',
       'hero.badge':'Automatización empresarial con IA','hero.title1':'Automatizamos',
       'hero.sub':'Retainer mensual. Implementamos automatizaciones con IA, sistemas CRM y bots personalizados — y nos encargamos de todo por ti.',
