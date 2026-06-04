@@ -623,8 +623,8 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
   </ul>
   <div class="nav-right">
     <div class="lang-switch">
-      <button class="lang-btn active" id="btn-en">EN</button>
-      <button class="lang-btn" id="btn-es">ES</button>
+      <button class="lang-btn" id="btn-en">EN</button>
+      <button class="lang-btn active" id="btn-es">ES</button>
     </div>
     <a href="#" onclick="openModal(); return false;" class="nav-cta" data-i18n="nav.cta">Get started →</a>
   </div>
@@ -882,7 +882,7 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
     }
   };
 
-  window._twWords = T.en['tw.words'].split(',');
+  window._twWords = T.es['tw.words'].split(',');
 
   window.setLang = function(lang) {
     var t = T[lang];
@@ -898,6 +898,9 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
 
   document.getElementById('btn-en').addEventListener('click', function(){ window.setLang('en'); });
   document.getElementById('btn-es').addEventListener('click', function(){ window.setLang('es'); });
+  
+  // Inicializar en español por defecto
+  window.setLang('es');
 })();
 
 // ─────────────────────────────────────
