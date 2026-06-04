@@ -491,6 +491,92 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
   #splash-logo { font-size: 22px; }
   .hero-title { letter-spacing: -1px; }
 }
+
+/* ─── MODAL FORM ─────────────────────────────────────── */
+#contact-modal {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(5,5,8,0.85); backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.3s;
+}
+#contact-modal.show { display: flex; }
+#contact-modal.visible { opacity: 1; }
+.modal-content {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 24px; padding: 48px 40px; max-width: 520px; width: 90%;
+  position: relative; transform: translateY(30px);
+  transition: transform 0.4s ease;
+}
+#contact-modal.visible .modal-content { transform: translateY(0); }
+.modal-close {
+  position: absolute; top: 20px; right: 20px;
+  background: transparent; border: none; color: var(--text-muted);
+  font-size: 24px; cursor: pointer; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; transition: all 0.2s;
+}
+.modal-close:hover { background: rgba(139,92,246,0.1); color: var(--text); }
+.modal-title {
+  font-size: 28px; font-weight: 800; margin-bottom: 8px;
+  background: linear-gradient(135deg, #fff 0%, var(--purple-light) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.modal-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--text); margin-bottom: 8px; letter-spacing: 0.3px;
+}
+.form-group input,
+.form-group textarea {
+  width: 100%; padding: 14px 16px; border-radius: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  color: var(--text); font-size: 15px; font-family: inherit;
+  transition: all 0.2s;
+}
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none; border-color: var(--purple);
+  background: rgba(139,92,246,0.05);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+}
+.form-group textarea { resize: vertical; min-height: 100px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.btn-submit {
+  width: 100%; padding: 16px; border-radius: 12px;
+  background: var(--purple); color: white; border: none;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: all 0.3s; margin-top: 12px; font-family: inherit;
+}
+.btn-submit:hover {
+  background: var(--violet); box-shadow: 0 8px 32px var(--purple-glow);
+  transform: translateY(-2px);
+}
+.btn-submit:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+.form-success {
+  display: none; text-align: center; padding: 24px;
+}
+.form-success.show { display: block; }
+.success-icon {
+  width: 64px; height: 64px; margin: 0 auto 16px;
+  background: rgba(34,197,94,0.1); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+}
+.success-title {
+  font-size: 22px; font-weight: 700; margin-bottom: 8px;
+  color: var(--text);
+}
+.success-text { font-size: 14px; color: var(--text-muted); }
+@media (max-width: 768px) {
+  .modal-content { padding: 36px 24px; }
+  .form-row { grid-template-columns: 1fr; gap: 20px; }
+  .modal-title { font-size: 24px; }
+}
 </style>
 </head>
 <body>
@@ -540,7 +626,7 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
       <button class="lang-btn active" id="btn-en">EN</button>
       <button class="lang-btn" id="btn-es">ES</button>
     </div>
-    <a href="mailto:itolabagent@gmail.com" class="nav-cta" data-i18n="nav.cta">Get started →</a>
+    <a href="#" onclick="openModal(); return false;" class="nav-cta" data-i18n="nav.cta">Get started →</a>
   </div>
 </nav>
 
@@ -553,7 +639,7 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
   </h1>
   <p class="hero-sub" data-i18n="hero.sub">Monthly retainer. We implement AI automations, CRM systems, and custom bots — and handle everything so you don't have to.</p>
   <div class="hero-actions">
-    <a href="mailto:itolabagent@gmail.com" class="btn-primary" data-i18n="hero.cta">Start automating →</a>
+    <a href="#" onclick="openModal(); return false;" class="btn-primary" data-i18n="hero.cta">Start automating →</a>
     <a href="#how" class="btn-secondary" data-i18n="hero.cta2">See how it works ↓</a>
   </div>
   <div class="stats-bar">
@@ -665,7 +751,7 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
   <h2 class="cta-title"><span data-i18n="cta.title1">Ready to automate</span><br><span style="background:linear-gradient(135deg,var(--violet),#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" data-i18n="cta.title2">your business?</span></h2>
   <p class="cta-sub" data-i18n="cta.sub">Join the businesses running on AI. Monthly retainer. No fluff. Just results.</p>
   <div class="cta-actions">
-    <a href="mailto:itolabagent@gmail.com" class="btn-primary" style="font-size:17px;padding:18px 44px" data-i18n="cta.btn">Start today →</a>
+    <a href="#" onclick="openModal(); return false;" class="btn-primary" style="font-size:17px;padding:18px 44px" data-i18n="cta.btn">Start today →</a>
     <a href="mailto:itolabagent@gmail.com" class="btn-email"><span>✉</span>itolabagent@gmail.com</a>
   </div>
 </section>
@@ -674,6 +760,54 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
   <div class="footer-logo">ITO LabAgent</div>
   <div class="footer-copy" data-i18n="footer.copy">© 2026 ITO LabAgent. All rights reserved.</div>
 </footer>
+
+<!-- ══ CONTACT MODAL ══ -->
+<div id="contact-modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    
+    <div id="form-container">
+      <h2 class="modal-title" data-i18n="modal.title">Cuéntanos tu proyecto</h2>
+      <p class="modal-subtitle" data-i18n="modal.subtitle">Completa el formulario y te respondemos en menos de 24 horas</p>
+      
+      <form id="contact-form" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="form.name">Nombre</label>
+            <input type="text" name="nombre" required>
+          </div>
+          <div class="form-group">
+            <label data-i18n="form.surname">Apellidos</label>
+            <input type="text" name="apellidos" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label data-i18n="form.email">Email</label>
+          <input type="email" name="email" required>
+        </div>
+        
+        <div class="form-group">
+          <label data-i18n="form.phone">Teléfono</label>
+          <input type="tel" name="telefono" required>
+        </div>
+        
+        <div class="form-group">
+          <label data-i18n="form.message">Cuéntanos tu consulta</label>
+          <textarea name="consulta" required></textarea>
+        </div>
+        
+        <button type="submit" class="btn-submit" data-i18n="form.submit">Enviar consulta</button>
+      </form>
+    </div>
+    
+    <div id="form-success" class="form-success">
+      <div class="success-icon">✓</div>
+      <h3 class="success-title" data-i18n="success.title">¡Mensaje enviado!</h3>
+      <p class="success-text" data-i18n="success.text">Te responderemos en menos de 24 horas.</p>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════
      SCRIPTS
@@ -710,7 +844,10 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
       'c2.name':'SHAMS Jewellery','c2.type':'Luxury Jewellery · London','c2.result':'2× ROI','c2.rl':'in first 60 days','c2.desc':'Bilingual e-commerce website (EN/ES), automated product catalog, and lead nurturing for high-ticket sales.',
       'cta.title1':'Ready to automate','cta.title2':'your business?','cta.sub':'Join the businesses running on AI. Monthly retainer. No fluff. Just results.','cta.btn':'Start today →',
       'footer.copy':'© 2026 ITO LabAgent. All rights reserved.',
-      'tw.words':'Your Business,Your CRM,Your Leads,Your Follow-ups,Everything'
+      'tw.words':'Your Business,Your CRM,Your Leads,Your Follow-ups,Everything',
+      'modal.title':'Tell us about your project','modal.subtitle':'Fill out the form and we\'ll respond within 24 hours',
+      'form.name':'Name','form.surname':'Surname','form.email':'Email','form.phone':'Phone','form.message':'Tell us your query','form.submit':'Send query',
+      'success.title':'Message sent!','success.text':'We\'ll respond within 24 hours.'
     },
     es: {
       'nav.services':'Servicios','nav.how':'Cómo funciona','nav.pricing':'Precios','nav.clients':'Clientes','nav.cta':'Empezar →',
@@ -738,7 +875,10 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
       'c2.name':'SHAMS Jewellery','c2.type':'Joyería de Lujo · Londres','c2.result':'2× ROI','c2.rl':'en los primeros 60 días','c2.desc':'Web bilingüe (EN/ES), catálogo automatizado y sistema de nurturing para ventas de alto valor.',
       'cta.title1':'¿Listo para automatizar','cta.title2':'tu negocio?','cta.sub':'Únete a los negocios que funcionan con IA. Retainer mensual. Sin rodeos. Solo resultados.','cta.btn':'Empezar hoy →',
       'footer.copy':'© 2026 ITO LabAgent. Todos los derechos reservados.',
-      'tw.words':'Tu Negocio,Tu CRM,Tus Leads,Tus Seguimientos,Todo'
+      'tw.words':'Tu Negocio,Tu CRM,Tus Leads,Tus Seguimientos,Todo',
+      'modal.title':'Cuéntanos tu proyecto','modal.subtitle':'Completa el formulario y te respondemos en menos de 24 horas',
+      'form.name':'Nombre','form.surname':'Apellidos','form.email':'Email','form.phone':'Teléfono','form.message':'Cuéntanos tu consulta','form.submit':'Enviar consulta',
+      'success.title':'¡Mensaje enviado!','success.text':'Te responderemos en menos de 24 horas.'
     }
   };
 
@@ -1070,6 +1210,70 @@ document.querySelectorAll('.scard,.ccard,.pcard,.ind-card').forEach(function(car
   }
   setTimeout(loop, 1500);
 })();
+
+// ─────────────────────────────────────
+// CONTACT MODAL
+// ─────────────────────────────────────
+function openModal() {
+  var modal = document.getElementById('contact-modal');
+  modal.classList.add('show');
+  setTimeout(function() { modal.classList.add('visible'); }, 10);
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  var modal = document.getElementById('contact-modal');
+  modal.classList.remove('visible');
+  setTimeout(function() { 
+    modal.classList.remove('show');
+    document.getElementById('form-container').style.display = 'block';
+    document.getElementById('form-success').classList.remove('show');
+    document.getElementById('contact-form').reset();
+  }, 300);
+  document.body.style.overflow = '';
+}
+
+// Form submission
+document.getElementById('contact-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var form = e.target;
+  var btn = form.querySelector('.btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  
+  var data = new FormData(form);
+  fetch(form.action, {
+    method: 'POST',
+    body: data,
+    headers: { 'Accept': 'application/json' }
+  })
+  .then(function(response) {
+    if (response.ok) {
+      document.getElementById('form-container').style.display = 'none';
+      document.getElementById('form-success').classList.add('show');
+      setTimeout(closeModal, 3000);
+    } else {
+      alert('Hubo un error. Por favor intenta de nuevo o escríbenos a itolabagent@gmail.com');
+      btn.disabled = false;
+      btn.textContent = document.documentElement.lang === 'es' ? 'Enviar consulta' : 'Send query';
+    }
+  })
+  .catch(function() {
+    alert('Hubo un error. Por favor intenta de nuevo o escríbenos a itolabagent@gmail.com');
+    btn.disabled = false;
+    btn.textContent = document.documentElement.lang === 'es' ? 'Enviar consulta' : 'Send query';
+  });
+});
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Close modal on backdrop click
+document.getElementById('contact-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
 </script>
 </body>
 </html>
