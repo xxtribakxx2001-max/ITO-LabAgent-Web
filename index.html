@@ -902,7 +902,8 @@ footer { padding:40px 48px; border-top:1px solid var(--border); display:flex; al
   document.getElementById('btn-es').addEventListener('click', function(){ window.setLang('es'); });
   
   // Inicializar en español por defecto
-  window.setLang('es');
+  var urlLang = new URLSearchParams(window.location.search).get('lang');
+  window.setLang(urlLang === 'en' ? 'en' : 'es');
 })();
 
 // ─────────────────────────────────────
